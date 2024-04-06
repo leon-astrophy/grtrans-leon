@@ -1,0 +1,10 @@
+/*.a
+/*.o
+/*.mod
+/*.so
+/Makefile.top
+/grtrans
+/*.out
+/*.p
+/*~
+/*.pyc
