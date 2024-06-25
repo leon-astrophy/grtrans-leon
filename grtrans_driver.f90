@@ -86,6 +86,9 @@
 #ifdef LEON
          real(kind=8), dimension(:), allocatable :: gam_relv, cosrho0, r_in
          real(kind=8) :: i0
+         real(kind=8) :: risco
+         real(kind=8) :: a_spin
+         real(kind=8) :: z1, z2       
 #endif
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!         
          npow=3; j=0; status=0; k=0
@@ -184,7 +187,11 @@
 ! Leon's patch. I override calc_emissivity to compute inverse bulk compton
 #ifdef LEON
                   r_in = g%x%data(2)
-                  call calc_emissivity(nu,e,ep,r_in(1),cosrho0(1),gam_relv(1),i0)
+                  a_spin = g%gk%a
+                  z1=1.+(1.-a_spin*a_spin)**(1./3.)*((1.+a_spin)**(1./3.)+(1.-a_spin)**(1./3.))
+                  z2=sqrt(3.*a_spin*a_spin+z1*z1)
+                  risco=3.+z2-sign(sqrt((3.-z1)*(3.+z1+2.*z2)),a_spin) 
+                  call calc_emissivity(nu,e,ep,r_in(1),cosrho0(1),gam_relv(1),i0,risco)
 #else
                   call calc_emissivity(nu,e,ep)
 #endif
@@ -365,6 +372,7 @@
 ! this is normal situation
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 ! Leon's patch, save extra variables to I !
+! Also, zero all polarized flux beyond the isco #
 #ifdef LEON
                      r%I(5,:) = i0
 #endif
@@ -384,8 +392,8 @@
                      r%I(18,:) = bhl1
                      r%I(19,:) = bhl2
                      r%I(20,:) = bhl3
-                     r%I(21,:) = c2xi(1)
-                     r%I(22,:) = s2xi(1)
+                     r%I(21,:) = cosrho0(1)
+                     r%I(22,:) = gam_relv(1)
 #endif
                      call save_raytrace_camera_pixel(c((l-1)*nfreq*nparams+(m-1)*nfreq+k), &
                        (/real(gargs%alpha(i)),real(gargs%beta(i))/),real(r%I(:,r%npts)),i)

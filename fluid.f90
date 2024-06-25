@@ -590,6 +590,10 @@
 !        real :: rms,T0
         real, dimension(size(x0)) :: T,omega
         real, dimension(size(x0),10) :: metric
+#ifdef LEON
+        real, dimension(size(x0)) :: rad, delta
+        real :: risco, z1, z2, ke, lang
+#endif 
         call thindisk_vals(real(x0%data(2)),real(x0%data(3)),a,T,omega)
         f%rho=T
 !        write(6,*) 'get fluidvars: ',size(f%rho), size(T)
@@ -608,6 +612,22 @@
         f%u%data(1)=sqrt(-1./(metric(:,1)+2d0*metric(:,4)*omega+metric(:,10)* &
          omega*omega))
         f%u%data(4)=omega*f%u%data(1)
+#ifdef LEON
+         z1=1.+(1.-a*a)**(1./3.)*((1.+a)**(1./3.)+(1.-a)**(1./3.))
+         z2=sqrt(3.*a*a+z1*z1)
+         risco=3.+z2-sign(sqrt((3.-z1)*(3.+z1+2.*z2)),a)
+         ke = (1.0d0 - 2.0d0/3.0d0/risco)**(0.5d0)
+         lang = 2.0d0*SQRT(3.0d0)*(1.0d0 - 2.0d0*a/3.0d0/SQRT(risco))
+         rad = x0%data(2) 
+         delta = rad*rad - 2.0d0*rad + a*a
+         !write (*,*) lang, ke, rad, risco 
+         where (rad <= risco)
+             f%u%data(1)= ((rad*rad + a*a + 2*a*a/rad)*ke - 2*a*lang/rad)/delta
+             f%u%data(2)= - SQRT(2.0d0/3.0d0/risco)*(risco/rad - 1.0d0)**(1.5d0)
+             f%u%data(4)= (2.0d0*a*ke/rad + (1.0d0 - 2.0d0/rad)*lang)/delta      
+         endwhere
+         !write (*,*) f%u%data(1), f%u%data(2), f%u%data(4), delta, a
+#endif 
 ! Assign normal vector as magnetic field for comoving_ortho:
         f%b = calc_polvec(x0%data(2),cos(x0%data(3)),k0,dble(a),asin(1d0))
 !         f%b%data(1)=-f%b%data(1)

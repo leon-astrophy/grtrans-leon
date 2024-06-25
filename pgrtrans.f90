@@ -161,8 +161,11 @@
             fbl06,fnp,ftp,frin,frout,fthin,fthout,fphiin,fphiout,fscalefac,sigcut)
             write(6,*) 'load fluid model ',fname,spin
             call load_fluid_model(fname,spin,fargs)
-
+#ifdef EXTRA
+            call load_chandra_tab24()
+#else
             if(nup.eq.1.and.nvals.eq.4) call load_chandra_tab24()
+#endif
             write(6,*) 'mu loop: ',nro,nphi,nup,standard,nmu
             write(6,*) 'mu loop: ',mu0
             do j=1,nmu
@@ -216,7 +219,11 @@
                !       write(6,*) 'spin after: ',spin
                !          call advance_fluid_timestep(fname,dt)
             enddo
+#ifdef EXTRA
+            call del_chandra_tab24()
+#else
             if(nup.eq.1.and.nvals.eq.4) call del_chandra_tab24()
+#endif
             write(6,*) 'Write camera', nvals, nextra
             allocate(ivals(nvals+nextra,nro*nphi,NCAMS))
             ivals(:,:,:)=0d0

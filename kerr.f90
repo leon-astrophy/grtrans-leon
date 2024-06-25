@@ -698,10 +698,10 @@ real(kind=8) :: bhl1, bhl2, bhl3
         real(kind=8), dimension(10,size(r)) :: tmetric
 
         ! Metric components !
-        real(kind=8), dimension(size(r)) :: gtt, gtp, grr, gmm, gpp
+        !real(kind=8), dimension(size(r)) :: gtt, gtp, grr, gmm, gpp
 
         ! Covariant and contravariant 4-velocity !
-        real(kind=8), dimension(size(r)) :: ut, ur, um, up, urc, umc, utc, upc
+        !real(kind=8), dimension(size(r)) :: ut, ur, um, up, urc, umc, utc, upc
 
         ! 4-Vectors in the ZAMO frame !
         real(kind=8), dimension(size(r)) :: uhatt, uhatr ,uhatm, uhatp
@@ -709,7 +709,7 @@ real(kind=8) :: bhl1, bhl2, bhl3
         real(kind=8), dimension(size(r)) :: khatt, khatr, khatm, khatp
 
         ! Normalized ahat, see Shcherbakov Huang 2011 !
-        real(kind=8), dimension(size(r)) :: aahatt, aahatm,aahatr,aahatp
+        real(kind=8), dimension(size(r)) :: aahatt, aahatm, aahatr, aahatp
 
         ! Vector components for camera e_x parallel transported to this point !
         real(kind=8), dimension(size(r)) :: al1, al2, al3
@@ -717,8 +717,12 @@ real(kind=8) :: bhl1, bhl2, bhl3
         ! Unnormalized aha, see Shcherbakov Huang 2011 !
         real(kind=8), dimension(size(r)) :: ahatt, ahatm, ahatr, ahatp
 
+        ! Perpendicular component of b
+        !real(kind=8), dimension(size(r)) :: bpenr, bpenm, bpenp
+        !real(kind=8), dimension(size(r)) :: cvecr, cvecm, cvecp
+
         ! Dot products !
-        real(kind=8), dimension(size(r)) :: bdotb, bdotk, kdotk
+        !real(kind=8), dimension(size(r)) :: bdotb, bdotk, kdotk, cdotk
         real(kind=8), dimension(size(r)) :: bpdotbp, bpdotbb, aadotbp
 
         ! velocity !
@@ -726,14 +730,15 @@ real(kind=8) :: bhl1, bhl2, bhl3
         real(kind=8), dimension(size(r)) :: v_r, v_th, v_phi, vsq, omega
 
         ! Norms !
-        real(kind=8), dimension(size(r)) :: knorm, anorm
-        real(kind=8), dimension(size(r)) :: normk, normu
+        !real(kind=8), dimension(size(r)) :: anorm, bnorm, bbnorm
+        real(kind=8), dimension(size(r)) :: normk, normu, knorm
 
         ! Rotating angles !
         real(kind=8), dimension(size(r)) :: sxi,cxi
 
         ! Transformed 4-vectors
-        real(kind=8), dimension(size(r),3) :: bbhat, bphat, aahat
+        !real(kind=8), dimension(size(r),3) :: bphat
+        real(kind=8), dimension(size(r),3) :: bbhat, aahat
 
         ! Projection vectors !
         type (four_Vector), dimension(size(r)) :: ekt, ekr, ekm ,ekp, ahat
@@ -745,6 +750,7 @@ real(kind=8) :: bhl1, bhl2, bhl3
         real(kind=8), dimension(size(r)) :: delta_bl, sig_bl, a_bl
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! For compton module !
         aspin_leon = a
         rbh_leon = 1.0d0 + SQRT(1.0d0 - a*a)
 
@@ -752,8 +758,8 @@ real(kind=8) :: bhl1, bhl2, bhl3
         metric=kerr_metric(r,th,a); tmetric=transpose(metric)
 
         ! Co-variant metric components
-        gtt=metric(:,1) ; gtp=metric(:,4) ; grr=metric(:,5)
-        gmm=metric(:,8) ; gpp=metric(:,10)
+        !gtt=metric(:,1) ; gtp=metric(:,4) ; grr=metric(:,5)
+        !gmm=metric(:,8) ; gpp=metric(:,10)
 
         ! Metric quantities !
         delta_bl = r*r - 2*r + a*a
@@ -769,13 +775,18 @@ real(kind=8) :: bhl1, bhl2, bhl3
         END IF
 
         ! Now replace magnetic field with 4-velocity !
-        b = u
+        if(check_transport) THEN
+          b = b
+        else
+          b = u
+        end if
+        !if(r(1) <= 2) WRITE (*,*) u(:)%data(1), u(:)%data(2), u(:)%data(3),u(:)%data(4)
         
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         ! Gather all possible four-velocity components to simplify things:
-        ut=u%data(1) ; ur=u%data(2) ; um=u%data(3) ; up=u%data(4)
-        utc=gtt*ut+gtp*up; upc=gpp*up+gtp*ut ; urc=grr*ur ; umc=um*gmm
+        !ut=u%data(1) ; ur=u%data(2) ; um=u%data(3) ; up=u%data(4)
+        !utc=gtt*ut+gtp*up; upc=gpp*up+gtp*ut ; urc=grr*ur ; umc=um*gmm
 
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -790,11 +801,7 @@ real(kind=8) :: bhl1, bhl2, bhl3
         Kap1=alpha+a*sqrt(1.-mus*mus)
         Kap2=-beta ! See paragraph after Eq. 34 in 2016 grtrans paper
         if((Kap1.ne.0d0).or.(Kap2.ne.0d0)) then
-            IF(check_transport) THEN
-                call transport_perpk_leon(k,r,th,a,metric,Kap1,Kap2,al1,al2,al3)
-            ELSE
-                call transport_perpk(k,r,th,a,metric,Kap1,Kap2,al1,al2,al3)
-            END IF
+            call transport_perpk(k,r,th,a,metric,Kap1,Kap2,al1,al2,al3)
         else
                 al1=0d0; al2=0d0; al3=1d0/sqrt(metric(:,10))
         endif
@@ -840,10 +847,12 @@ real(kind=8) :: bhl1, bhl2, bhl3
         
         ! relativistic gamma vector !
         gam_relv = 1.0d0/DSQRT(1.0d0 - vsq)
+        
+        !if(r(1) <= 2) WRITE (*,*) r(1), gam_relv, vsq, u(:)%data(1), u(:)%data(2), u(:)%data(3),u(:)%data(4)
 
         ! Angle between fluid velocity and the photon direction !
         normk = SQRT(khatr**2+khatm**2+khatp**2)
-        normu = SQRT(v_r**2+v_th**2+v_phi**2)
+        normu = SQRT(v_r**2+v_th**2+v_phi**2) 
         cosrho0 = (khatr*v_r + khatm*v_th + khatp*v_phi)/normk/normu
 
         ! Assign 4-velocity in the ZAMO frame !
@@ -854,6 +863,10 @@ real(kind=8) :: bhl1, bhl2, bhl3
         khat%data(1)=khatt; khat%data(2)=khatr; khat%data(3)=khatm; khat%data(4)=khatp
         ahat%data(1)=ahatt; ahat%data(2)=ahatr; ahat%data(3)=ahatm; ahat%data(4)=ahatp
 
+        ! For debug !
+        !cosrho0 = (khatp*v_phi)/normk/abs(v_phi)
+        !bhat%data(1)=0.0d0; bhat%data(2)=0.0d0; bhat%data(3)=0.0d0; bhat%data(4)=1.0d0
+        
         ! Assign metric !
         call assign_metric(b,tmetric); call assign_metric(u,tmetric)
 
@@ -1083,6 +1096,14 @@ subroutine comoving_ortho_core(r,th,a,alpha,beta,mus,u,b,k, &
 !           write(6,*) 'NaN in comoving ortho ahat: ',aa%data(2),aa%data(3),aa%data(4)
 !           write(6,*) 'NaN in comoving ortho Kpw: ',Kap1,Kap2
 !        endif
+#ifdef EXTRA
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! For Debug !
+        bl1 = bhatr(1); bl2 = bhatm(1); bl3 = bhatp(1)
+        kl1 = khatr(1); kl2 = khatm(1); kl3 = khatp(1)
+        ahl1 = aahat(1,1); ahl2 = aahat(1,2); ahl3 = aahat(1,3)
+        bhl1 = bbhat(1,1); bhl2 = bbhat(1,2); bhl3 = bbhat(1,3)
+#endif
       end subroutine comoving_ortho_core
 
       subroutine comoving_ortho_debug_old(r,th,a,alpha,beta,mus,u,b,k, &

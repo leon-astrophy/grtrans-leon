@@ -30,9 +30,6 @@ REAL*8, ALLOCATABLE, DIMENSION(:) :: sinalpha_p
 REAL*8, ALLOCATABLE, DIMENSION(:) :: cosrho_p
 REAL*8, ALLOCATABLE, DIMENSION(:) :: sinrho_p
 
-! Optical Depth !
-REAL*8, PARAMETER :: tau_ics = 1.0d0
-
 ! Pi !
 REAL*8, PARAMETER :: pi_ics = 4.D0*DATAN(1.D0)
 
@@ -59,9 +56,16 @@ REAL*8, PARAMETER :: drhop = (x_high - x_low)/DBLE(n_integral)
 REAL*8, PARAMETER :: dalphap = (y_high - y_low)/DBLE(n_integral)
 
 ! Power law index !
-REAL*8, PARAMETER :: a_pow = 2.0d0
 REAL*8, PARAMETER :: c_pow = 1.0d0
 REAL*8, PARAMETER :: s_pow = 1.0d0
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Key parameters, optical depth and power-loaw index !
+
+REAL*8, PARAMETER :: a_pow = 3.0d0
+REAL*8, PARAMETER :: tau_ics = 1.0d0 
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 contains
 
@@ -361,11 +365,11 @@ END SUBROUTINE
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-SUBROUTINE SCATTERING (nu0z, temp, r_in, cosrho0, gamma_vel, stokesi, stokesq, stokesu, i0)
+SUBROUTINE SCATTERING (nu0z, temp, r_in, cosrho0, gamma_vel, stokesi, stokesq, stokesu, i0, risco)
 IMPLICIT NONE
 
 ! Input !
-REAL*8, INTENT(IN) :: nu0z, temp, gamma_vel, r_in
+REAL*8, INTENT(IN) :: nu0z, temp, gamma_vel, r_in, risco 
 REAL*8, INTENT(OUT) :: stokesi, stokesq, stokesu, i0
 
 ! Real variables !
@@ -377,7 +381,7 @@ REAL*8 :: i_local, q_local
 REAL*8 :: c_local, tau_local, rlim
 
 ! Dummies !
-REAL*8 :: num, den
+REAL*8 :: num, den, tmp
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -410,6 +414,9 @@ IF(grmhd) THEN
   ! Interpolate !
   CALL INTERPOLATE_GRMHD(r_in, c_local, tau_local)
 
+  ! For debug !
+  c_local = c_pow*(r_in/rbh_leon)**(-a_pow)
+  
   ! Initial field !
   CALL RADIATION_FIELD(nu0z, temp, c_local, i0)
 
@@ -431,23 +438,38 @@ ELSE
 
   ! Set prefactor !
   c_local = c_pow*(r_in/rbh_leon)**(-a_pow)
+  !tmp = -(r_in - risco)**2/(risco - LOG(risco) - 1.0d0)
+  !c_local = c_pow*(r_in/risco)*EXP(tmp)
 
   ! Initial field !
   CALL RADIATION_FIELD(nu0z, temp, c_local, i0)
-
+    
   ! Prefactor !
   prefactor = (3.0d0/16.0d0/pi_ics)*(1.0d0 - beta_vel*cosrho0)*tau_ics*D2_lorentz**3
-
+  !!!!!!!!!!!!!!!!!!!!
+  !prefactor = 0.0d0
+  !!!!!!!!!!!!!!!!!!!!
+  
   ! Scattering !
   CALL DBINTEGRAL(cosrho0p, sinrho0p, nu0z, temp, beta_vel, gamma_vel, D2_lorentz, c_local, i_local, q_local)
-
+  !!!!!!!!!!!!!!!!!!!!
+  !i_local = 0.0d0
+  !q_local = 0.0d0
+  !!!!!!!!!!!!!!!!!!!!
+  
 END IF
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 ! output !
 stokesi = prefactor*i_local
 stokesq = prefactor*q_local
-stokesu = 0.0d0
+stokesu = 0.0d0 
+
+! smoothing !
+tmp = (r_in - risco)/0.1d0
+tmp = 1.0d0/(1.0d0 + EXP(-tmp))
+stokesi = prefactor*i_local*(1.0d0 - tmp) + i0*tmp
+stokesq = prefactor*q_local*(1.0d0 - tmp)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 

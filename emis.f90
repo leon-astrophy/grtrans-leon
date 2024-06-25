@@ -168,9 +168,9 @@
          end subroutine bbemis
 
 #ifdef LEON
-         subroutine fbbpolemis(nu,T,f,cosne,K,r_in,cosrho0,gam_relv,i0)
+         subroutine fbbpolemis(nu,T,f,cosne,K,r_in,cosrho0,gam_relv,i0,risco)
          use COMPTON
-         real(kind=8), intent(in) :: cosrho0, gam_relv, r_in
+         real(kind=8), intent(in) :: cosrho0, gam_relv, r_in, risco
          real(kind=8), intent(out) :: i0
          real(kind=8) :: stokesi, stokesq, stokesu
 #else
@@ -183,7 +183,7 @@
 #ifdef LEON
          ! Note that nu contains the red-shift factor !
          ! So nu is nu0z !
-         CALL SCATTERING (nu(1), T(1), r_in, cosrho0, gam_relv, stokesi, stokesq, stokesu, i0)
+         CALL SCATTERING (nu(1), T(1), r_in, cosrho0, gam_relv, stokesi, stokesq, stokesu, i0, risco)
          K(:,1)=stokesi
          K(:,2)=stokesq
          K(:,3)=stokesu
@@ -477,8 +477,8 @@
          end subroutine initialize_emissivity
 
 #ifdef LEON
-         subroutine calc_emissivity(nu,e,ep,r_in,cosrho0,gam_relv,i0)
-         real(kind=8), INTENT(IN) :: cosrho0, gam_relv, r_in
+         subroutine calc_emissivity(nu,e,ep,r_in,cosrho0,gam_relv,i0,risco)
+         real(kind=8), INTENT(IN) :: cosrho0, gam_relv, r_in, risco
          real(kind=8), INTENT(OUT) :: i0
 #else
          subroutine calc_emissivity(nu,e,ep)
@@ -568,7 +568,7 @@
            case(ebbpol)
 !              write(6,*) 'call bbpolemis: ',size(e%tcgs),size(K,1),size(K,2), size(nu)
 #ifdef LEON
-             call fbbpolemis(nu,e%tcgs,e%fcol,e%cosne,K,r_in,cosrho0,gam_relv,i0)   
+             call fbbpolemis(nu,e%tcgs,e%fcol,e%cosne,K,r_in,cosrho0,gam_relv,i0,risco)   
 #else
              call fbbpolemis(nu,e%tcgs,e%fcol,e%cosne,K)
 #endif
@@ -836,6 +836,7 @@
 !            c2xi=1d0
 !            s2xi=0d0
 !         endwhere
+!write (*,*) ju, jq
          e%j(:,2)=c2xi*jq-s2xi*ju
          e%j(:,3)=s2xi*jq+c2xi*ju
          e%K(:,2)=c2xi*aq-s2xi*au
